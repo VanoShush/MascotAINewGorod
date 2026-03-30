@@ -1,0 +1,15 @@
+Flask
+flask-limiter
+python-dotenv
+google-genai
+pydantic
+
+nest_asyncio
+gunicorn
+
+Flask-SQLAlchemy
+psycopg2-binary
+
+numpy
+redis
+httpx

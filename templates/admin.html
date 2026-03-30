@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Панель управления маскотом</title>
+    <style>
+        *{box-sizing:border-box}
+        body{font-family:'Segoe UI',sans-serif;background:#f4f7f6;padding:20px;color:#333;margin:0}
+        .header-bar{display:flex;gap:10px;margin-bottom:20px;align-items:center}
+        input,textarea,select{padding:8px;border:1px solid #ccc;border-radius:4px;width:100%;margin-bottom:10px}
+        button{padding:8px 15px;background:#4CAF50;color:#fff;border:none;border-radius:4px;cursor:pointer;transition:background .2s}
+        button:hover{background:#45a049}
+        button.danger{background:#f44336} button.danger:hover{background:#da190b}
+        button.secondary{background:#999}   button.secondary:hover{background:#777}
+        button.info{background:#2196F3}     button.info:hover{background:#1976D2}
+        .grid{display:grid;grid-template-columns:320px 1fr;gap:20px}
+        .card{background:#fff;padding:20px;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.05);margin-bottom:20px}
+        /* Login */
+        #loginScreen{max-width:400px;margin:80px auto;text-align:center}
+        #appScreen{display:none}
+        /* Progress bar */
+        .progress-wrap{background:#eee;border-radius:4px;height:10px;margin:8px 0}
+        .progress-bar{background:#4CAF50;height:100%;border-radius:4px;width:0%;transition:width .3s}
+        /* Domain tags */
+        .domain-tag{display:inline-flex;align-items:center;gap:6px;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:20px;padding:4px 10px;margin:3px;font-size:13px}
+        .domain-tag button{background:none;border:none;color:#c62828;cursor:pointer;font-size:14px;padding:0;line-height:1}
+        /* Stats */
+        .metric-box{background:#f8f9fa;border-radius:8px;padding:12px;text-align:center}
+        .metric-box .val{font-size:28px;font-weight:700;color:#333}
+        .metric-box .lbl{font-size:12px;color:#666;margin-top:2px}
+        .stat-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:13px}
+        .stat-bar-wrap{flex:1;background:#eee;border-radius:4px;height:8px;overflow:hidden}
+        .stat-bar{height:100%;border-radius:4px;transition:width .4s}
+        .chart-row{display:flex;align-items:flex-end;gap:2px;height:60px;margin-top:4px}
+        .chart-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px}
+        .chart-bar{width:100%;background:#4CAF50;border-radius:2px 2px 0 0;min-height:2px;transition:height .3s}
+        .chart-label{font-size:9px;color:#999;transform:rotate(-45deg);white-space:nowrap}
+        /* Modal */
+        .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center}
+        .modal-overlay.open{display:flex}
+        .modal{background:#fff;border-radius:8px;padding:24px;width:500px;max-width:95vw;box-shadow:0 8px 30px rgba(0,0,0,.2)}
+        .modal h3{margin-top:0}
+        .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
+    </style>
+</head>
+<body>
+
+<!-- Экран входа -->
+<div id="loginScreen">
+    <h2>🤖 Панель управления маскотом</h2>
+    <input type="password" id="secret" placeholder="Пароль администратора" onkeydown="if(event.key==='Enter')login()">
+    <button onclick="login()" style="width:100%">Войти</button>
+    <p id="loginError" style="color:red;display:none">Неверный пароль</p>
+</div>
+
+<!-- Основное приложение -->
+<div id="appScreen">
+    <div class="header-bar">
+        <h2 style="margin:0">🤖 Панель управления маскотом</h2>
+        <button class="secondary" onclick="logout()" style="margin-left:auto">Выйти</button>
+        <span id="status" style="font-weight:bold;margin-left:10px"></span>
+    </div>
+
+    <div class="grid">
+        <!-- Левая колонка: настройки -->
+        <div>
+            <div class="card">
+                <h3 style="margin-top:0">⚙️ Настройки</h3>
+
+                <label>🌐 Разрешённые домены:</label>
+                <p style="font-size:12px;color:#666;margin:0 0 6px">
+                    Маскот будет работать только на этих сайтах.
+                    Вводите без протокола: <code>noviy-gorod.ru</code>
+                </p>
+                <div style="display:flex;gap:6px;margin-bottom:6px">
+                    <input type="text" id="newDomain" placeholder="example.ru" style="margin-bottom:0;flex:1" onkeydown="if(event.key==='Enter')addDomain()">
+                    <button onclick="addDomain()" class="info" style="white-space:nowrap">+ Добавить</button>
+                </div>
+                <div id="domainsList" style="margin-bottom:12px"></div>
+
+                <label>Основной цвет:</label>
+                <input type="color" id="primaryColor" value="#4CAF50" style="height:40px">
+
+                <label>URL спрайта:</label>
+                <input type="text" id="spriteUrl" placeholder="AllSprites.png">
+
+                <label>Системный промпт:</label>
+                <textarea id="systemPrompt" rows="5" placeholder="Ты — помощник..."></textarea>
+
+                <details style="margin-bottom:12px;border:1px solid #ddd;border-radius:6px;padding:10px">
+                    <summary style="cursor:pointer;font-weight:600;font-size:14px">🔌 Интеграция с каталогом (опционально)</summary>
+                    <p style="font-size:12px;color:#666;margin:8px 0">
+                        Позволяет маскоту искать товары/объекты через API вашего сайта.
+                        Если не заполнено — маскот работает без поиска по каталогу.
+                    </p>
+                    <details style="margin-bottom:12px;background:#f0f7ff;border:1px solid #c8e0ff;border-radius:6px;padding:10px">
+                        <summary style="cursor:pointer;font-size:13px;font-weight:600;color:#1a6bb5">❓ Как заполнить эти поля?</summary>
+                        <div style="font-size:12px;color:#333;line-height:1.7;margin-top:10px">
+                            <b>Шаг 1 — Найдите URL поиска:</b><br>
+                            Откройте сайт → нажмите <b>F12</b> → вкладка <b>Network</b>.<br>
+                            Сделайте поиск на сайте. Найдите запрос с JSON-ответом.<br>
+                            Скопируйте URL <b>без параметров</b> (всё до <code>?</code>).<br>
+                            <br>
+                            <b>Шаг 2 — Опишите параметры:</b><br>
+                            <pre style="background:#fff;border:1px solid #ddd;padding:8px;margin:4px 0;border-radius:4px;font-size:11px">- price_to: максимальная цена в рублях
+- rooms: количество комнат (0 = студия)
+- district: район на англ. (nevsky, central)
+- area_min: минимальная площадь в кв.м</pre>
+                            <b>Шаг 3 — Опишите формат ответа:</b><br>
+                            <pre style="background:#fff;border:1px solid #ddd;padding:8px;margin:4px 0;border-radius:4px;font-size:11px">[{"id":124,"title":"2к, 47м²","price":7800000,"url":"/flat/124"}]</pre>
+                        </div>
+                    </details>
+                    <label>URL поиска (GET-запрос):</label>
+                    <input type="text" id="catalogApiUrl" placeholder="https://site.ru/api/search">
+                    <label>Описание параметров:</label>
+                    <textarea id="catalogApiParams" rows="4" placeholder="- price_to: максимальная цена в рублях&#10;- rooms: количество комнат (0=студия)"></textarea>
+                    <label>Описание формата ответа (необязательно):</label>
+                    <textarea id="catalogApiResponse" rows="3" placeholder='[{"title":"2к, 47м²","price":7800000,"url":"/flat/12"}]'></textarea>
+                </details>
+
+                <label>📍 Положение маскота:</label>
+                <select id="positionCorner" onchange="updatePositionHint()">
+                    <option value="bottom-right">↘ Снизу справа</option>
+                    <option value="bottom-left">↙ Снизу слева</option>
+                    <option value="top-right">↗ Сверху справа</option>
+                    <option value="top-left">↖ Сверху слева</option>
+                </select>
+                <div style="display:flex;gap:10px;margin-bottom:8px">
+                    <div style="flex:1">
+                        <label id="posBottomLabel" style="margin-bottom:4px">Отступ снизу (px):</label>
+                        <input type="number" id="positionBottom" value="20" min="0" max="500">
+                    </div>
+                    <div style="flex:1">
+                        <label id="posSideLabel" style="margin-bottom:4px">Отступ справа (px):</label>
+                        <input type="number" id="positionSide" value="20" min="0" max="500">
+                    </div>
+                </div>
+
+                <label>⏱ Появление маскота:</label>
+                <select id="autoOpen" onchange="toggleDelayField()">
+                    <option value="manual">🖱 Только по нажатию кнопки</option>
+                    <option value="immediate">⚡ Сразу при загрузке страницы</option>
+                    <option value="delayed">⏳ Через заданное время</option>
+                </select>
+                <div id="autoOpenDelayRow" style="display:none;margin-top:8px">
+                    <label>Задержка (секунды):</label>
+                    <input type="number" id="autoOpenDelay" value="5" min="1" max="120">
+                </div>
+
+                <button onclick="saveConfig()" style="width:100%;margin-top:12px">💾 Сохранить настройки</button>
+            </div>
+
+            <!-- База знаний -->
+            <div class="card">
+                <h4 style="margin-top:0">📄 База знаний</h4>
+                <p style="font-size:12px;color:#666;margin-bottom:10px">
+                    Загрузите <code>.txt</code> или <code>.md</code> файл с описанием компании,
+                    услугами, ценами, правилами.<br>
+                    Маскот будет отвечать на вопросы на основе этой информации.<br>
+                    Максимум: 2 МБ. Можно загрузить несколько файлов.
+                </p>
+                <input type="file" id="docFile" accept=".txt,.md" style="padding:0;border:none">
+                <button onclick="uploadDocument()" class="info" style="width:100%;margin-top:8px" id="uploadDocBtn">
+                    📤 Загрузить документ
+                </button>
+                <div id="uploadProgress" style="display:none;margin-top:8px">
+                    <div class="progress-wrap"><div class="progress-bar" id="progressBar"></div></div>
+                    <p id="uploadStatusText" style="font-size:12px;color:#666;margin:4px 0"></p>
+                </div>
+                <div id="docsList" style="margin-top:10px"></div>
+            </div>
+        </div>
+
+        <!-- Правая колонка: статистика + список документов -->
+        <div>
+            <div class="card">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+                    <h3 style="margin:0">📊 Статистика</h3>
+                    <div style="display:flex;gap:6px;align-items:center">
+                        <select id="statsPeriod" onchange="loadStats()" style="width:auto;margin:0;padding:6px">
+                            <option value="7">7 дней</option>
+                            <option value="30">30 дней</option>
+                        </select>
+                        <button class="danger" onclick="resetStats()" style="padding:6px 10px">🗑 Сбросить</button>
+                        <button class="secondary" onclick="loadStats()" style="padding:6px 10px">🔄</button>
+                    </div>
+                </div>
+                <div id="statsMetrics" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px">
+                    <p style="color:#999;grid-column:1/-1">Загрузка...</p>
+                </div>
+                <div id="statsChart" style="margin-bottom:16px"></div>
+                <div>
+                    <h4 style="margin:0 0 8px;color:#333">🔥 Популярные вопросы</h4>
+                    <div id="statsFound"></div>
+                </div>
+            </div>
+
+            <div class="card" id="docsCard" style="display:none">
+                <h3 id="docsCardTitle" style="margin-top:0">📄 Загруженные документы</h3>
+                <div id="docsCardBody"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модал просмотра содержимого документа -->
+<div class="modal-overlay" id="docViewModal">
+    <div class="modal" style="width:700px;max-height:80vh;display:flex;flex-direction:column">
+        <h3 id="docViewTitle" style="margin-top:0;flex-shrink:0">📄 Содержимое документа</h3>
+        <div id="docViewBody" style="overflow-y:auto;flex:1;font-size:13px;line-height:1.6"></div>
+        <div class="modal-actions" style="flex-shrink:0">
+            <button class="secondary" onclick="closeDocModal()">Закрыть</button>
+        </div>
+    </div>
+</div>
+
+<script>
+let adminSecret = '';
+
+// ---- Helpers ----
+function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function escapeAttr(s) { return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,'\\n'); }
+function getHeaders() { return {'Content-Type':'application/json','X-Admin-Secret':adminSecret}; }
+function showStatus(text, color) {
+    const el = document.getElementById('status');
+    el.innerText = text; el.style.color = color;
+    setTimeout(()=>el.innerText='', 3000);
+}
+
+// ---- Авторизация ----
+async function login() {
+    const secret = document.getElementById('secret').value;
+    if (!secret) return;
+    try {
+        // Проверяем пароль запросом к конфигу
+        const r = await fetch('/api/admin/config', {
+            headers: {'Content-Type':'application/json','X-Admin-Secret':secret}
+        });
+        if (!r.ok) { document.getElementById('loginError').style.display='block'; return; }
+        adminSecret = secret;
+        document.getElementById('loginScreen').style.display = 'none';
+        document.getElementById('appScreen').style.display = 'block';
+        loadConfig();
+        loadDomains();
+        loadDocuments();
+        loadStats();
+    } catch(e) { document.getElementById('loginError').style.display='block'; }
+}
+function logout() {
+    adminSecret = '';
+    document.getElementById('loginScreen').style.display = 'block';
+    document.getElementById('appScreen').style.display = 'none';
+    document.getElementById('secret').value = '';
+}
+
+// ---- Конфигурация ----
+async function loadConfig() {
+    try {
+        const r = await fetch('/api/admin/config', {headers: getHeaders()});
+        if (!r.ok) return;
+        const c = await r.json();
+        document.getElementById('primaryColor').value        = c.primary_color      || '#4CAF50';
+        document.getElementById('spriteUrl').value           = c.sprite_url         || '';
+        document.getElementById('systemPrompt').value        = c.system_prompt      || '';
+        document.getElementById('positionCorner').value      = c.position_corner    || 'bottom-right';
+        document.getElementById('positionBottom').value      = c.position_bottom    ?? 20;
+        document.getElementById('positionSide').value        = c.position_side      ?? 20;
+        document.getElementById('autoOpen').value            = c.auto_open          || 'manual';
+        document.getElementById('autoOpenDelay').value       = c.auto_open_delay    ?? 5;
+        document.getElementById('catalogApiUrl').value       = c.catalog_api_url    || '';
+        document.getElementById('catalogApiParams').value    = c.catalog_api_params || '';
+        document.getElementById('catalogApiResponse').value  = c.catalog_api_response || '';
+        updatePositionHint();
+        toggleDelayField();
+    } catch(e) { showStatus('Ошибка загрузки конфига', 'red'); }
+}
+
+async function saveConfig() {
+    const data = {
+        primary_color:        document.getElementById('primaryColor').value,
+        sprite_url:           document.getElementById('spriteUrl').value,
+        system_prompt:        document.getElementById('systemPrompt').value,
+        position_corner:      document.getElementById('positionCorner').value,
+        position_bottom:      parseInt(document.getElementById('positionBottom').value) || 20,
+        position_side:        parseInt(document.getElementById('positionSide').value)   || 20,
+        auto_open:            document.getElementById('autoOpen').value,
+        auto_open_delay:      parseInt(document.getElementById('autoOpenDelay').value)  || 5,
+        catalog_api_url:      document.getElementById('catalogApiUrl').value.trim(),
+        catalog_api_params:   document.getElementById('catalogApiParams').value.trim(),
+        catalog_api_response: document.getElementById('catalogApiResponse').value.trim(),
+    };
+    try {
+        const r = await fetch('/api/admin/config', {
+            method: 'POST', headers: getHeaders(), body: JSON.stringify(data)
+        });
+        const j = await r.json();
+        if (r.ok) { showStatus('Настройки сохранены!', 'green'); }
+        else { showStatus('Ошибка: ' + j.error, 'red'); }
+    } catch(e) { showStatus('Ошибка сети', 'red'); }
+}
+
+function updatePositionHint() {
+    const corner = document.getElementById('positionCorner').value;
+    const isTop  = corner.startsWith('top');
+    const isLeft = corner.endsWith('left');
+    document.getElementById('posBottomLabel').textContent = isTop  ? 'Отступ сверху (px):' : 'Отступ снизу (px):';
+    document.getElementById('posSideLabel').textContent   = isLeft ? 'Отступ слева (px):'  : 'Отступ справа (px):';
+}
+function toggleDelayField() {
+    const v = document.getElementById('autoOpen').value;
+    document.getElementById('autoOpenDelayRow').style.display = v === 'delayed' ? 'block' : 'none';
+}
+
+// ---- Домены ----
+let currentDomains = [];
+
+async function loadDomains() {
+    try {
+        const r = await fetch('/api/admin/domains', {headers: getHeaders()});
+        if (!r.ok) return;
+        currentDomains = await r.json();
+        renderDomains();
+    } catch(e) { showStatus('Ошибка загрузки доменов', 'red'); }
+}
+
+function normalizeDomain(raw) {
+    return raw.trim().toLowerCase()
+        .replace(/^https?:\/\//, '')
+        .replace(/^www\./, '')
+        .replace(/\/$/, '')
+        .split('/')[0];
+}
+
+function renderDomains() {
+    const container = document.getElementById('domainsList');
+    if (!currentDomains.length) {
+        container.innerHTML = '<p style="font-size:12px;color:#999;margin:4px 0">Домены не добавлены — маскот доступен с любого сайта (не рекомендуется).</p>';
+        return;
+    }
+    container.innerHTML = currentDomains.map(d => `
+        <span class="domain-tag">
+            🌐 ${escapeHtml(d.domain)}
+            <button onclick="deleteDomain(${d.id})" title="Удалить">×</button>
+        </span>`).join('');
+}
+
+async function addDomain() {
+    const input  = document.getElementById('newDomain');
+    const domain = normalizeDomain(input.value);
+    if (!domain) return showStatus('Введите домен', 'red');
+    try {
+        const r = await fetch('/api/admin/domains', {
+            method: 'POST', headers: getHeaders(), body: JSON.stringify({domain})
+        });
+        const j = await r.json();
+        if (r.ok) {
+            showStatus(`Домен ${j.domain} добавлен`, 'green');
+            input.value = '';
+            loadDomains();
+        } else {
+            showStatus('Ошибка: ' + j.error, 'red');
+        }
+    } catch(e) { showStatus('Ошибка сети', 'red'); }
+}
+
+async function deleteDomain(domainId) {
+    if (!confirm('Удалить этот домен?')) return;
+    try {
+        const r = await fetch(`/api/admin/domains/${domainId}`, {
+            method: 'DELETE', headers: getHeaders()
+        });
+        if (r.ok) { showStatus('Домен удалён', 'green'); loadDomains(); }
+    } catch(e) { showStatus('Ошибка удаления', 'red'); }
+}
+
+// ---- Статистика ----
+async function loadStats() {
+    const days = document.getElementById('statsPeriod').value;
+    try {
+        const r = await fetch(`/api/admin/stats?days=${days}`, {headers: getHeaders()});
+        if (!r.ok) throw new Error();
+        const s = await r.json();
+        renderStats(s);
+    } catch(e) {
+        document.getElementById('statsMetrics').innerHTML = '<p style="color:red">Ошибка загрузки</p>';
+    }
+}
+
+async function resetStats() {
+    if (!confirm('Удалить всю статистику? Это действие необратимо.')) return;
+    try {
+        const r = await fetch('/api/admin/stats', {method: 'DELETE', headers: getHeaders()});
+        const j = await r.json();
+        if (r.ok) {
+            showStatus(`Статистика сброшена (удалено ${j.deleted} записей)`, 'green');
+            loadStats();
+        } else {
+            showStatus('Ошибка: ' + j.error, 'red');
+        }
+    } catch(e) { showStatus('Ошибка сети', 'red'); }
+}
+
+function buildQuestionList(questions, bgColor, textColor, key) {
+    if (!questions.length) {
+        return '<p style="font-size:12px;color:#999">Нет данных за период</p>';
+    }
+    const VISIBLE = 5;
+    const rows = questions.map((q, i) => {
+        const hidden = i >= VISIBLE ? `class="extra-${key}" style="display:none"` : '';
+        return `<div ${hidden}>
+            <div class="stat-bar-row" style="align-items:flex-start;margin-bottom:4px">
+                <span style="flex:1;color:#333;font-size:13px">"${escapeHtml(q.question)}"</span>
+                <span style="flex-shrink:0;background:${bgColor};color:${textColor};border-radius:10px;padding:1px 8px;font-size:11px;margin-left:6px">${q.count}×</span>
+            </div>
+        </div>`;
+    });
+    let html = rows.join('');
+    if (questions.length > VISIBLE) {
+        html += `<button class="secondary" style="font-size:12px;padding:4px 10px;margin-top:4px"
+            onclick="toggleExtra('${key}', this)">
+            ▼ Ещё ${questions.length - VISIBLE}
+        </button>`;
+    }
+    return html;
+}
+
+function toggleExtra(key, btn) {
+    const els = document.querySelectorAll(`.extra-${key}`);
+    const isHidden = els[0] && els[0].style.display === 'none';
+    els.forEach(el => el.style.display = isHidden ? 'block' : 'none');
+    btn.textContent = isHidden ? '▲ Скрыть' : `▼ Ещё ${els.length}`;
+}
+
+function renderStats(s) {
+    document.getElementById('statsMetrics').innerHTML = `
+        <div class="metric-box">
+            <div class="val">${s.total_messages}</div>
+            <div class="lbl">Сообщений</div>
+        </div>
+        <div class="metric-box">
+            <div class="val">${s.unique_sessions}</div>
+            <div class="lbl">Диалогов</div>
+        </div>
+    `;
+
+    const maxDay = Math.max(...s.by_day.map(d=>d.count), 1);
+    const bars = s.by_day.map(d => {
+        const h = Math.round((d.count / maxDay) * 52);
+        const label = d.date.slice(5);
+        return `<div class="chart-col">
+            <div class="chart-bar" style="height:${h}px" title="${d.date}: ${d.count}"></div>
+            <div class="chart-label">${label}</div>
+        </div>`;
+    }).join('');
+    document.getElementById('statsChart').innerHTML = `
+        <p style="font-size:12px;color:#666;margin:0 0 4px">Сообщений по дням:</p>
+        <div class="chart-row">${bars}</div>
+    `;
+
+    const totalActions = s.actions.HIGHLIGHT + s.actions.NAVIGATE + (s.actions.FILL_INPUT||0) + s.actions.none;
+    const actionsHtml = [
+        {label: 'HIGHLIGHT',    val: s.actions.HIGHLIGHT,                                  color: '#1976D2'},
+        {label: 'NAVIGATE',     val: s.actions.NAVIGATE,                                   color: '#388E3C'},
+        {label: 'FILL_INPUT',   val: (s.actions.FILL_INPUT||0) + (s.actions.FILL_INPUTS||0), color: '#F57C00'},
+        {label: 'Без действия', val: s.actions.none,                                        color: '#9E9E9E'},
+    ].map(a => {
+        const pct = totalActions ? Math.round(a.val / totalActions * 100) : 0;
+        return `<div class="stat-bar-row">
+            <span style="width:95px;flex-shrink:0">${a.label}</span>
+            <div class="stat-bar-wrap"><div class="stat-bar" style="width:${pct}%;background:${a.color}"></div></div>
+            <span style="width:45px;text-align:right;color:#666">${a.val} (${pct}%)</span>
+        </div>`;
+    }).join('');
+
+    document.getElementById('statsMetrics').innerHTML += `
+        <div style="grid-column:1/-1;margin-top:4px">${actionsHtml}</div>
+    `;
+
+    document.getElementById('statsFound').innerHTML = buildQuestionList(s.top_questions, '#e3f2fd', '#1565C0', 'found');
+}
+
+// ---- База знаний (документы) ----
+async function loadDocuments() {
+    const listEl = document.getElementById('docsList');
+    listEl.innerHTML = '<p style="font-size:12px;color:#999">Загрузка...</p>';
+    try {
+        const r = await fetch('/api/admin/documents', {headers: getHeaders()});
+        if (!r.ok) { listEl.innerHTML = `<p style="font-size:12px;color:red">Ошибка ${r.status}</p>`; return; }
+        const docs = await r.json();
+        renderDocsList(docs);
+        renderDocsCard(docs);
+    } catch(e) {
+        listEl.innerHTML = `<p style="font-size:12px;color:red">Ошибка: ${e.message}</p>`;
+    }
+}
+
+function renderDocsList(docs) {
+    const listEl = document.getElementById('docsList');
+    if (!docs.length) {
+        listEl.innerHTML = '<p style="font-size:12px;color:#999;margin:4px 0">Документы не загружены</p>';
+        document.getElementById('docsCard').style.display = 'none';
+        return;
+    }
+    listEl.innerHTML = docs.map(d => `
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;padding:6px 8px;background:#f8f9fa;border-radius:6px;font-size:12px">
+            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${escapeHtml(d.filename)}">
+                📄 ${escapeHtml(d.filename)}
+            </span>
+            <span style="flex-shrink:0;color:#888">${d.chunks} чанков</span>
+            <button class="info" style="padding:3px 8px;font-size:11px" onclick="viewDocument('${escapeAttr(d.filename)}')">👁</button>
+            <button class="danger" style="padding:3px 8px;font-size:11px" onclick="deleteDocument('${escapeAttr(d.filename)}')">🗑</button>
+        </div>`).join('');
+    document.getElementById('docsCard').style.display = 'block';
+}
+
+function renderDocsCard(docs) {
+    const card  = document.getElementById('docsCard');
+    const body  = document.getElementById('docsCardBody');
+    if (!docs.length) { card.style.display = 'none'; return; }
+    card.style.display = 'block';
+    body.innerHTML = `
+        <p style="font-size:12px;color:#666;margin-bottom:12px">
+            ${docs.length} документ(ов) · ${docs.reduce((s,d)=>s+d.chunks,0)} чанков всего.
+        </p>
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+            <thead><tr>
+                <th style="text-align:left;padding:8px;background:#f8f9fa;border-bottom:1px solid #eee">Файл</th>
+                <th style="text-align:center;padding:8px;background:#f8f9fa;border-bottom:1px solid #eee;width:90px">Чанков</th>
+                <th style="padding:8px;background:#f8f9fa;border-bottom:1px solid #eee;width:120px"></th>
+            </tr></thead>
+            <tbody>
+                ${docs.map(d => `
+                <tr>
+                    <td style="padding:8px;border-bottom:1px solid #f0f0f0">${escapeHtml(d.filename)}</td>
+                    <td style="padding:8px;border-bottom:1px solid #f0f0f0;text-align:center">${d.chunks}</td>
+                    <td style="padding:8px;border-bottom:1px solid #f0f0f0;display:flex;gap:6px;justify-content:flex-end">
+                        <button class="info" style="padding:4px 10px;font-size:12px" onclick="viewDocument('${escapeAttr(d.filename)}')">👁 Просмотр</button>
+                        <button class="danger" style="padding:4px 10px;font-size:12px" onclick="deleteDocument('${escapeAttr(d.filename)}')">🗑</button>
+                    </td>
+                </tr>`).join('')}
+            </tbody>
+        </table>`;
+}
+
+async function viewDocument(filename) {
+    document.getElementById('docViewTitle').innerText = `📄 ${filename}`;
+    document.getElementById('docViewBody').innerHTML = '<p style="color:#999">Загрузка чанков...</p>';
+    document.getElementById('docViewModal').classList.add('open');
+    try {
+        const r = await fetch(`/api/admin/documents/${encodeURIComponent(filename)}/chunks`, {headers: getHeaders()});
+        if (!r.ok) throw new Error();
+        const data = await r.json();
+        const chunks = data.chunks || [];
+        if (!chunks.length) {
+            document.getElementById('docViewBody').innerHTML = '<p style="color:#999">Чанки не найдены</p>';
+            return;
+        }
+        document.getElementById('docViewBody').innerHTML = chunks.map((c, i) => `
+            <div style="margin-bottom:16px;padding:12px;background:#f8f9fa;border-radius:6px;border-left:3px solid #4CAF50">
+                <div style="font-size:11px;color:#888;margin-bottom:6px;font-weight:600">ЧАНК ${i + 1} / ${chunks.length}</div>
+                <div style="white-space:pre-wrap;word-break:break-word">${escapeHtml(c.text)}</div>
+            </div>`).join('');
+    } catch(e) {
+        document.getElementById('docViewBody').innerHTML = '<p style="color:red">Ошибка загрузки содержимого</p>';
+    }
+}
+
+function closeDocModal() {
+    document.getElementById('docViewModal').classList.remove('open');
+}
+
+async function deleteDocument(filename) {
+    if (!confirm(`Удалить документ «${filename}»?\nВсе его чанки будут удалены из базы знаний.`)) return;
+    try {
+        const r = await fetch(`/api/admin/documents/${encodeURIComponent(filename)}`, {
+            method: 'DELETE', headers: getHeaders()
+        });
+        const j = await r.json();
+        if (r.ok) {
+            showStatus(`Удалено ${j.deleted_chunks} чанков`, 'green');
+            loadDocuments();
+        } else {
+            showStatus('Ошибка: ' + (j.error || 'неизвестная'), 'red');
+        }
+    } catch(e) { showStatus('Ошибка сети', 'red'); }
+}
+
+// ---- Загрузка документа (фоновая задача) ----
+let uploadPollInterval = null;
+
+async function uploadDocument() {
+    const fileInput = document.getElementById('docFile');
+    if (!fileInput.files.length) return showStatus('Выберите файл!', 'red');
+
+    const file = fileInput.files[0];
+    const formData = new FormData();
+    formData.append('file', file);
+
+    document.getElementById('uploadDocBtn').disabled = true;
+    document.getElementById('uploadProgress').style.display = 'block';
+    setUploadProgress(0, 'Отправка файла...');
+
+    try {
+        const r = await fetch('/api/admin/upload_document', {
+            method: 'POST',
+            headers: {'X-Admin-Secret': adminSecret},
+            body: formData
+        });
+        const result = await r.json();
+        if (!r.ok) { handleUploadError(result.error); return; }
+        pollJobStatus(result.job_id, result.total);
+    } catch(e) {
+        handleUploadError('Ошибка сети');
+    }
+}
+
+function pollJobStatus(jobId, total) {
+    let dots = 0;
+    uploadPollInterval = setInterval(async () => {
+        try {
+            const r = await fetch(`/api/admin/jobs/${jobId}`, {headers: getHeaders()});
+            if (!r.ok) return;
+            const status = await r.json();
+
+            if (status.status === 'running') {
+                const pct = total > 0 ? Math.round((status.progress / total) * 100) : 0;
+                dots = (dots + 1) % 4;
+                setUploadProgress(pct, `Генерация векторов${'.'.repeat(dots)} (${status.progress}/${total})`);
+            } else if (status.status === 'done') {
+                clearInterval(uploadPollInterval);
+                const label = status.count != null ? `${status.count} чанков` : `${status.total || ''} элементов`;
+                setUploadProgress(100, `✅ Загружено: ${label}`);
+                document.getElementById('uploadDocBtn').disabled = false;
+                document.getElementById('docFile').value = '';
+                loadDocuments();
+                setTimeout(() => {
+                    document.getElementById('uploadProgress').style.display = 'none';
+                    document.getElementById('progressBar').style.width = '0%';
+                }, 4000);
+            } else if (status.status === 'error') {
+                clearInterval(uploadPollInterval);
+                handleUploadError(status.message || 'Неизвестная ошибка');
+            }
+        } catch(e) { /* ignore network glitch */ }
+    }, 1500);
+}
+
+function setUploadProgress(pct, text) {
+    document.getElementById('progressBar').style.width = pct + '%';
+    document.getElementById('uploadStatusText').innerText = text;
+}
+function handleUploadError(msg) {
+    clearInterval(uploadPollInterval);
+    setUploadProgress(0, '❌ Ошибка: ' + msg);
+    document.getElementById('uploadDocBtn').disabled = false;
+}
+
+// Закрыть модал по клику на overlay
+document.getElementById('docViewModal').addEventListener('click', function(e) {
+    if (e.target === this) closeDocModal();
+});
+</script>
+</body>
+</html>
