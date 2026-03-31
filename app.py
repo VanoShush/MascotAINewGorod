@@ -73,8 +73,8 @@ def create_app() -> Flask:
     from blueprints.public import public_bp
     from blueprints.admin  import admin_bp
 
-    # chat — только с версией /api/v1/chat
-    app.register_blueprint(chat_bp,   url_prefix="/api/v1")
+    # chat — регистрируем на корне: виджет обращается к /api/chat
+    app.register_blueprint(chat_bp,   url_prefix="")
 
     # public — регистрируем на корне: /mascot-widget.js, /sprites/, /api/config
     # без версии, т.к. виджет вставляется на сайты с фиксированным URL
