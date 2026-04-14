@@ -42,6 +42,50 @@
         .modal{background:#fff;border-radius:8px;padding:24px;width:500px;max-width:95vw;box-shadow:0 8px 30px rgba(0,0,0,.2)}
         .modal h3{margin-top:0}
         .modal-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
+        /* Tabs */
+        .tab-nav{display:flex;gap:4px;border-bottom:2px solid #e0e0e0;margin-bottom:20px}
+        .tab-btn{padding:9px 18px;background:none;border:none;border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer;font-size:14px;color:#888;transition:all .2s;border-radius:4px 4px 0 0;font-family:'Segoe UI',sans-serif}
+        .tab-btn:hover{color:#333;background:#f5f5f5}
+        .tab-btn.active{color:#4CAF50;border-bottom-color:#4CAF50;font-weight:600;background:#f9fff9}
+        /* Sessions layout */
+        .sessions-layout{display:flex;gap:16px;height:calc(100vh - 195px);min-height:500px}
+        .sessions-sidebar{width:320px;flex-shrink:0;display:flex;flex-direction:column;gap:10px}
+        .sessions-main{flex:1;min-width:0;background:#fff;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.05);display:flex;flex-direction:column;overflow:hidden}
+        /* Session list items */
+        .session-item{padding:12px 14px;border:1px solid #eee;border-radius:8px;cursor:pointer;transition:all .18s;background:#fff;margin-bottom:6px}
+        .session-item:hover{border-color:#a5d6a7;background:#f9fff9;transform:translateX(2px)}
+        .session-item.active{border-color:#4CAF50;background:#e8f5e9;box-shadow:0 2px 8px rgba(76,175,80,.15)}
+        .session-item-name{font-weight:600;font-size:13px;color:#333;margin-bottom:3px}
+        .session-item-meta{font-size:11px;color:#aaa;margin-bottom:5px;display:flex;gap:8px;align-items:center}
+        .session-item-preview{font-size:12px;color:#666;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+        .session-item-url{font-size:10px;color:#bbb;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        /* Pagination */
+        .pag-btn{padding:5px 10px;background:#fff;border:1px solid #ddd;border-radius:4px;cursor:pointer;font-size:13px;transition:all .15s;font-family:'Segoe UI',sans-serif}
+        .pag-btn:hover:not(:disabled){background:#e8f5e9;border-color:#4CAF50;color:#2e7d32}
+        .pag-btn:disabled{opacity:.4;cursor:not-allowed}
+        .pag-btn.active{background:#4CAF50;color:#fff;border-color:#4CAF50;font-weight:600}
+        /* Chat bubbles */
+        .chat-exchange{margin-bottom:20px}
+        .bubble-wrap-user{display:flex;justify-content:flex-end;margin-bottom:4px}
+        .bubble-wrap-bot{display:flex;justify-content:flex-start;margin-bottom:4px}
+        .bubble-user{background:#4CAF50;color:#fff;border-radius:16px 16px 4px 16px;padding:10px 14px;max-width:72%;font-size:14px;line-height:1.5;word-break:break-word}
+        .bubble-bot{background:#fff;border:1px solid #e4e4e4;border-radius:16px 16px 16px 4px;padding:10px 14px;max-width:72%;font-size:14px;line-height:1.5;word-break:break-word;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+        .bubble-meta{font-size:10px;color:#bbb;margin:0 4px 0 4px;align-self:flex-end;flex-shrink:0}
+        .action-badge{display:inline-flex;align-items:center;gap:3px;font-size:10px;padding:2px 8px;border-radius:10px;margin-left:8px;font-weight:600;vertical-align:middle}
+        .badge-HIGHLIGHT{background:#e3f2fd;color:#1565C0}
+        .badge-NAVIGATE{background:#e8f5e9;color:#2e7d32}
+        .badge-FILL_INPUT,.badge-FILL_INPUTS{background:#fff3e0;color:#e65100}
+        /* Chat view header */
+        .chat-view-header{padding:14px 18px;border-bottom:1px solid #eee;flex-shrink:0;background:#fafafa}
+        .chat-view-messages{flex:1;overflow-y:auto;padding:16px 18px;background:#f5f7f5;-webkit-overflow-scrolling:touch}
+        /* Placeholder */
+        .chat-placeholder{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#ccc;gap:10px}
+        /* Sidebar scroll */
+        .sessions-list-scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-right:2px}
+        .sessions-list-scroll::-webkit-scrollbar{width:4px}
+        .sessions-list-scroll::-webkit-scrollbar-thumb{background:#ddd;border-radius:4px}
+        /* Filters card */
+        .filters-card{background:#fff;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.05);padding:12px}
     </style>
 </head>
 <body>
@@ -62,6 +106,13 @@
         <span id="status" style="font-weight:bold;margin-left:10px"></span>
     </div>
 
+    <div class="tab-nav">
+        <button class="tab-btn active" id="tabBtnSettings" onclick="switchTab('settings')">⚙️ Настройки и статистика</button>
+        <button class="tab-btn" id="tabBtnSessions" onclick="switchTab('sessions')">💬 Диалоги <span id="sessionsTabBadge" style="background:#e0e0e0;color:#666;border-radius:10px;padding:1px 7px;font-size:11px;margin-left:4px">...</span></button>
+    </div>
+
+    <!-- ═══ Вкладка: Настройки и статистика ═══ -->
+    <div id="tabSettings">
     <div class="grid">
         <!-- Левая колонка: настройки -->
         <div>
@@ -202,6 +253,61 @@
             </div>
         </div>
     </div>
+    </div> <!-- /tabSettings -->
+
+    <!-- ═══ Вкладка: Диалоги ═══ -->
+    <div id="tabSessions" style="display:none">
+        <!-- Фильтры -->
+        <div class="filters-card" style="margin-bottom:12px">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+                <div style="flex:2;min-width:180px">
+                    <label style="font-size:12px;color:#666;display:block;margin-bottom:4px">🔍 Поиск по тексту сообщения</label>
+                    <input type="text" id="sessSearch" placeholder="Введите ключевое слово..." style="margin-bottom:0" oninput="debouncedSearchSessions()">
+                </div>
+                <div style="flex:1;min-width:130px">
+                    <label style="font-size:12px;color:#666;display:block;margin-bottom:4px">📅 Дата от</label>
+                    <input type="date" id="sessDateFrom" style="margin-bottom:0" onchange="loadSessions(1)">
+                </div>
+                <div style="flex:1;min-width:130px">
+                    <label style="font-size:12px;color:#666;display:block;margin-bottom:4px">📅 Дата до</label>
+                    <input type="date" id="sessDateTo" style="margin-bottom:0" onchange="loadSessions(1)">
+                </div>
+                <div style="flex:2;min-width:180px">
+                    <label style="font-size:12px;color:#666;display:block;margin-bottom:4px">🌐 Фильтр по URL страницы</label>
+                    <input type="text" id="sessUrlFilter" placeholder="Например: /catalog" style="margin-bottom:0" oninput="debouncedSearchSessions()">
+                </div>
+                <div>
+                    <button class="secondary" onclick="clearSessionFilters()" style="height:37px;margin-bottom:0">✕ Сбросить</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="sessions-layout">
+            <!-- Левая панель: список сессий -->
+            <div class="sessions-sidebar">
+                <div class="sessions-list-scroll" id="sessionsList">
+                    <p style="color:#999;font-size:13px;text-align:center;padding-top:20px">Загрузка...</p>
+                </div>
+                <div id="sessionsPagination" style="display:flex;gap:4px;flex-wrap:wrap;align-items:center;justify-content:center;padding:6px 0"></div>
+            </div>
+
+            <!-- Правая панель: просмотр диалога -->
+            <div class="sessions-main">
+                <!-- Placeholder -->
+                <div class="chat-placeholder" id="chatViewPlaceholder">
+                    <span style="font-size:52px">💬</span>
+                    <span style="font-size:15px;font-weight:500">Выберите диалог из списка</span>
+                    <span style="font-size:13px;max-width:280px;text-align:center">Нажмите на любую сессию слева, чтобы посмотреть историю переписки</span>
+                </div>
+                <!-- Chat view (скрыт до выбора сессии) -->
+                <div id="chatViewContent" style="display:none;flex-direction:column;height:100%">
+                    <div class="chat-view-header" id="chatViewHeader"></div>
+                    <div class="chat-view-messages" id="chatViewMessages"></div>
+                </div>
+            </div>
+        </div>
+    </div> <!-- /tabSessions -->
+
 </div>
 
 <!-- Модал просмотра содержимого документа -->
@@ -245,6 +351,12 @@ async function login() {
         loadDomains();
         loadDocuments();
         loadStats();
+        // Загружаем счётчик сессий для бейджа вкладки
+        fetch('/api/admin/sessions?per_page=1', { headers: {'Content-Type':'application/json','X-Admin-Secret':secret} })
+            .then(r => r.json()).then(d => {
+                if (d.total !== undefined) document.getElementById('sessionsTabBadge').textContent = d.total;
+            }).catch(() => {});
+        sessionsLoaded = false;
     } catch(e) { document.getElementById('loginError').style.display='block'; }
 }
 function logout() {
@@ -660,6 +772,222 @@ function handleUploadError(msg) {
 document.getElementById('docViewModal').addEventListener('click', function(e) {
     if (e.target === this) closeDocModal();
 });
+
+// ============================================================
+// TABS
+// ============================================================
+function switchTab(tab) {
+    document.getElementById('tabSettings').style.display = tab === 'settings' ? 'block' : 'none';
+    document.getElementById('tabSessions').style.display = tab === 'sessions' ? 'block' : 'none';
+    document.getElementById('tabBtnSettings').classList.toggle('active', tab === 'settings');
+    document.getElementById('tabBtnSessions').classList.toggle('active', tab === 'sessions');
+    if (tab === 'sessions' && !sessionsLoaded) {
+        loadSessions(1);
+        sessionsLoaded = true;
+    }
+}
+
+// ============================================================
+// SESSIONS
+// ============================================================
+let sessionsLoaded  = false;
+let sessCurrentPage = 1;
+let sessActiveId    = null;
+let sessSearchTimer = null;
+
+function debouncedSearchSessions() {
+    clearTimeout(sessSearchTimer);
+    sessSearchTimer = setTimeout(() => loadSessions(1), 400);
+}
+
+function clearSessionFilters() {
+    document.getElementById('sessSearch').value    = '';
+    document.getElementById('sessDateFrom').value  = '';
+    document.getElementById('sessDateTo').value    = '';
+    document.getElementById('sessUrlFilter').value = '';
+    loadSessions(1);
+}
+
+async function loadSessions(page) {
+    sessCurrentPage = page || 1;
+    const search  = document.getElementById('sessSearch').value.trim();
+    const dfrom   = document.getElementById('sessDateFrom').value;
+    const dto     = document.getElementById('sessDateTo').value;
+    const urlF    = document.getElementById('sessUrlFilter').value.trim();
+
+    const params = new URLSearchParams({ page: sessCurrentPage, per_page: 20 });
+    if (search) params.set('search', search);
+    if (dfrom)  params.set('date_from', dfrom);
+    if (dto)    params.set('date_to', dto);
+    if (urlF)   params.set('page_url', urlF);
+
+    const listEl = document.getElementById('sessionsList');
+    listEl.innerHTML = '<p style="color:#999;font-size:13px;text-align:center;padding-top:20px">⏳ Загрузка...</p>';
+
+    try {
+        const r = await fetch(`/api/admin/sessions?${params}`, { headers: getHeaders() });
+        if (!r.ok) { listEl.innerHTML = '<p style="color:red;font-size:13px;padding:10px">Ошибка загрузки</p>'; return; }
+        const data = await r.json();
+
+        // Обновляем бейдж на кнопке вкладки
+        document.getElementById('sessionsTabBadge').textContent = data.total;
+
+        renderSessionsList(data.sessions, data.total);
+        renderSessionsPagination(data.page, data.pages, data.total);
+    } catch(e) {
+        listEl.innerHTML = '<p style="color:red;font-size:13px;padding:10px">Ошибка сети</p>';
+    }
+}
+
+function renderSessionsList(sessions, total) {
+    const listEl = document.getElementById('sessionsList');
+    if (!sessions.length) {
+        listEl.innerHTML = '<p style="color:#999;font-size:13px;text-align:center;padding-top:30px">Диалоги не найдены</p>';
+        return;
+    }
+
+    listEl.innerHTML = sessions.map(s => {
+        const lastDate = s.last_at ? formatDateRu(s.last_at) : '—';
+        const isActive = s.session_id === sessActiveId;
+        const previewText = escapeHtml(s.preview || '...');
+        const urlShort = s.page_url ? new URL(s.page_url, 'http://x').pathname.slice(0, 40) : '';
+        return `
+        <div class="session-item ${isActive ? 'active' : ''}"
+             onclick="loadSessionChat('${escapeAttr(s.session_id)}', ${s.number}, this)">
+            <div class="session-item-name">👤 Пользователь ${s.number}</div>
+            <div class="session-item-meta">
+                <span>🕐 ${lastDate}</span>
+                <span>·</span>
+                <span>${s.message_count} ${pluralMsg(s.message_count)}</span>
+            </div>
+            <div class="session-item-preview">${previewText}</div>
+            ${urlShort ? `<div class="session-item-url">📄 ${escapeHtml(urlShort)}</div>` : ''}
+        </div>`;
+    }).join('');
+}
+
+function renderSessionsPagination(current, pages, total) {
+    const el = document.getElementById('sessionsPagination');
+    if (pages <= 1) { el.innerHTML = `<span style="font-size:12px;color:#aaa">Всего: ${total}</span>`; return; }
+
+    let btns = `<button class="pag-btn" onclick="loadSessions(${current - 1})" ${current <= 1 ? 'disabled' : ''}>‹</button>`;
+
+    // Показываем не более 5 кнопок страниц вокруг текущей
+    const range = 2;
+    for (let p = 1; p <= pages; p++) {
+        if (p === 1 || p === pages || (p >= current - range && p <= current + range)) {
+            btns += `<button class="pag-btn ${p === current ? 'active' : ''}" onclick="loadSessions(${p})">${p}</button>`;
+        } else if (p === current - range - 1 || p === current + range + 1) {
+            btns += `<span style="padding:0 2px;color:#aaa">…</span>`;
+        }
+    }
+    btns += `<button class="pag-btn" onclick="loadSessions(${current + 1})" ${current >= pages ? 'disabled' : ''}>›</button>`;
+    el.innerHTML = btns;
+}
+
+async function loadSessionChat(sessionId, number, itemEl) {
+    // Снимаем active со всех items
+    document.querySelectorAll('.session-item').forEach(el => el.classList.remove('active'));
+    if (itemEl) itemEl.classList.add('active');
+    sessActiveId = sessionId;
+
+    // Показываем chat view, скрываем placeholder
+    document.getElementById('chatViewPlaceholder').style.display = 'none';
+    const content = document.getElementById('chatViewContent');
+    content.style.display = 'flex';
+
+    document.getElementById('chatViewHeader').innerHTML = '<span style="color:#aaa;font-size:13px">⏳ Загрузка диалога...</span>';
+    document.getElementById('chatViewMessages').innerHTML = '';
+
+    try {
+        const r = await fetch(`/api/admin/sessions/${encodeURIComponent(sessionId)}`, { headers: getHeaders() });
+        if (!r.ok) {
+            document.getElementById('chatViewHeader').innerHTML = '<span style="color:red">Ошибка загрузки</span>';
+            return;
+        }
+        const data = await r.json();
+        renderChatHeader(data, number);
+        renderChatMessages(data.messages);
+    } catch(e) {
+        document.getElementById('chatViewHeader').innerHTML = '<span style="color:red">Ошибка сети</span>';
+    }
+}
+
+function renderChatHeader(data, number) {
+    const firstDate = data.messages.length ? formatDateRu(data.messages[0].created_at) : '';
+    const lastDate  = data.messages.length ? formatDateRu(data.messages[data.messages.length - 1].created_at) : '';
+    const urlText   = data.page_url
+        ? `<a href="${escapeHtml(data.page_url)}" target="_blank" style="color:#1976D2;font-size:12px;text-decoration:none;word-break:break-all" title="${escapeHtml(data.page_url)}">🔗 ${escapeHtml(data.page_url.slice(0, 60))}${data.page_url.length > 60 ? '…' : ''}</a>`
+        : '<span style="color:#bbb;font-size:12px">URL не сохранён</span>';
+
+    document.getElementById('chatViewHeader').innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+            <div>
+                <div style="font-weight:700;font-size:15px;margin-bottom:4px">👤 Пользователь ${number}</div>
+                <div style="font-size:12px;color:#888;display:flex;gap:12px;flex-wrap:wrap">
+                    <span>💬 ${data.total} ${pluralMsg(data.total)}</span>
+                    <span>📅 ${firstDate} — ${lastDate}</span>
+                </div>
+                <div style="margin-top:5px">${urlText}</div>
+            </div>
+            <div style="font-size:11px;color:#ccc;flex-shrink:0;max-width:220px;word-break:break-all" title="${escapeHtml(data.session_id)}">
+                ID: ${data.session_id.slice(0, 8)}…
+            </div>
+        </div>`;
+}
+
+function renderChatMessages(messages) {
+    const container = document.getElementById('chatViewMessages');
+    if (!messages.length) { container.innerHTML = '<p style="color:#aaa;text-align:center">Нет сообщений</p>'; return; }
+
+    const ACTION_LABELS = {
+        'HIGHLIGHT':  '🔍 Подсветка',
+        'NAVIGATE':   '➡️ Переход',
+        'FILL_INPUT': '✏️ Заполнение',
+        'FILL_INPUTS':'✏️ Заполнение',
+    };
+
+    container.innerHTML = messages.map(msg => {
+        const time = formatTimeRu(msg.created_at);
+        const actionBadge = msg.action_type && ACTION_LABELS[msg.action_type]
+            ? `<span class="action-badge badge-${msg.action_type}">${ACTION_LABELS[msg.action_type]}</span>`
+            : '';
+
+        return `
+        <div class="chat-exchange">
+            <div class="bubble-wrap-user">
+                <span class="bubble-meta">${time}</span>
+                <div class="bubble-user">${escapeHtml(msg.user_message)}</div>
+            </div>
+            ${msg.bot_response ? `
+            <div class="bubble-wrap-bot">
+                <div class="bubble-bot">${escapeHtml(msg.bot_response)}${actionBadge}</div>
+                <span class="bubble-meta">${time}</span>
+            </div>` : ''}
+        </div>`;
+    }).join('');
+
+    // Скроллим вниз
+    container.scrollTop = container.scrollHeight;
+}
+
+// ---- Date helpers ----
+function formatDateRu(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    return d.toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+function formatTimeRu(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return d.toLocaleString('ru-RU', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+}
+function pluralMsg(n) {
+    const mod10 = n % 10, mod100 = n % 100;
+    if (mod10 === 1 && mod100 !== 11) return 'сообщение';
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) return 'сообщения';
+    return 'сообщений';
+}
 </script>
 </body>
 </html>
