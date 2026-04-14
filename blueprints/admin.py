@@ -397,3 +397,124 @@ def reset_stats():
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
+
+
+# ---------------------------------------------------------------------------
+# Диалоги (сессии)
+# ---------------------------------------------------------------------------
+
+@admin_bp.route("/api/admin/sessions", methods=["GET"])
+def get_sessions():
+    """
+    Список сессий с пагинацией и фильтрами.
+    Параметры: page, per_page, search, date_from, date_to, page_url.
+    """
+    try:
+        page     = max(1, int(request.args.get("page", 1)))
+        per_page = min(50, max(5, int(request.args.get("per_page", 20))))
+    except ValueError:
+        page, per_page = 1, 20
+
+    search      = request.args.get("search",    "").strip()
+    date_from_s = request.args.get("date_from", "").strip()
+    date_to_s   = request.args.get("date_to",   "").strip()
+    url_filter  = request.args.get("page_url",  "").strip()
+
+    filters = [ChatLog.session_id.isnot(None)]
+
+    if search:
+        filters.append(ChatLog.user_message.ilike(f"%{search}%"))
+    if date_from_s:
+        try:
+            dt = datetime.strptime(date_from_s, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            filters.append(ChatLog.created_at >= dt)
+        except ValueError:
+            pass
+    if date_to_s:
+        try:
+            dt = datetime.strptime(date_to_s, "%Y-%m-%d").replace(
+                hour=23, minute=59, second=59, tzinfo=timezone.utc
+            )
+            filters.append(ChatLog.created_at <= dt)
+        except ValueError:
+            pass
+    if url_filter:
+        filters.append(ChatLog.page_url.ilike(f"%{url_filter}%"))
+
+    # Субзапрос: группируем по session_id, считаем метаданные
+    subq = (
+        db.session.query(
+            ChatLog.session_id,
+            func.count(ChatLog.id).label("message_count"),
+            func.min(ChatLog.created_at).label("first_at"),
+            func.max(ChatLog.created_at).label("last_at"),
+        )
+        .filter(*filters)
+        .group_by(ChatLog.session_id)
+        .subquery()
+    )
+
+    total = db.session.query(func.count()).select_from(subq).scalar() or 0
+    rows  = (
+        db.session.query(subq)
+        .order_by(subq.c.last_at.desc())
+        .limit(per_page)
+        .offset((page - 1) * per_page)
+        .all()
+    )
+
+    sessions_out = []
+    for i, row in enumerate(rows):
+        # Превью — первое сообщение сессии
+        first_log = (
+            ChatLog.query
+            .filter_by(session_id=row.session_id)
+            .order_by(ChatLog.created_at.asc())
+            .first()
+        )
+        sessions_out.append({
+            "session_id":    row.session_id,
+            "number":        (page - 1) * per_page + i + 1,
+            "message_count": row.message_count,
+            "first_at":      row.first_at.isoformat()  if row.first_at  else None,
+            "last_at":       row.last_at.isoformat()   if row.last_at   else None,
+            "preview":       (first_log.user_message or "")[:100] if first_log else "",
+            "page_url":      (first_log.page_url     or "")       if first_log else "",
+        })
+
+    return jsonify({
+        "sessions": sessions_out,
+        "total":    total,
+        "page":     page,
+        "per_page": per_page,
+        "pages":    max(1, (total + per_page - 1) // per_page),
+    })
+
+
+@admin_bp.route("/api/admin/sessions/<session_id>", methods=["GET"])
+def get_session_messages(session_id):
+    """Все сообщения одной сессии, отсортированные по времени."""
+    logs = (
+        ChatLog.query
+        .filter_by(session_id=session_id)
+        .order_by(ChatLog.created_at.asc())
+        .all()
+    )
+    if not logs:
+        return jsonify({"error": "Сессия не найдена"}), 404
+
+    return jsonify({
+        "session_id": session_id,
+        "page_url":   logs[0].page_url or "",
+        "total":      len(logs),
+        "messages": [
+            {
+                "id":           log.id,
+                "user_message": log.user_message,
+                "bot_response": log.bot_response or "",
+                "action_type":  log.action_type,
+                "created_at":   log.created_at.isoformat(),
+            }
+            for log in logs
+        ],
+    })
